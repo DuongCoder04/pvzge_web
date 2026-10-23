@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8">
 
-  <title>PvZ2 Gardendless Online | 0.15.0</title>
+  <title>PvZ2 Gardendless Online | 0.16.0</title>
 
   <!--http://www.html5rocks.com/en/mobile/mobifying/-->
   <meta name="viewport"
@@ -104,10 +104,13 @@
   <!-- Import map -->
   <script src="src/import-map.json" type="systemjs-importmap" charset="utf-8"> </script>
 
-  <script>
-    System.import('./index.js').catch(function (err) { console.error(err); })
-  </script>
   <script src="tmpPatch.js"></script>
+  <script>
+    import('./game-audio.js')
+      .then(function (audio) { return audio.initializeGameAudio(); })
+      .then(function () { return System.import('./index.js'); })
+      .catch(function (err) { console.error(err); });
+  </script>
 </body>
 
 </html>
