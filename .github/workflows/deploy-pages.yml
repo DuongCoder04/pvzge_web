@@ -15,11 +15,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
+    runs-on: ubuntu-24.04
     steps:
       - name: Check out complete game assets
         uses: actions/checkout@v4
@@ -27,12 +24,37 @@ jobs:
           lfs: true
       - name: Verify LFS assets
         run: git lfs fsck
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Test Web Lite build
+        run: node --test tests/web-lite.test.mjs tests/pages-lite.test.mjs
+      - name: Install resource codecs
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg unzip
+          bash scripts/install-linux-codecs.sh "$RUNNER_TEMP/web-lite-codecs"
+          echo "$RUNNER_TEMP/web-lite-codecs" >> "$GITHUB_PATH"
+      - name: Build Lite Pages artifact
+        run: |
+          node scripts/build-pages-lite.mjs --input docs --output "$RUNNER_TEMP/pages-lite"
+          git diff --quiet -- docs
       - name: Configure Pages
         uses: actions/configure-pages@v5
-      - name: Upload game
+      - name: Upload Lite game
         uses: actions/upload-pages-artifact@v4
         with:
-          path: docs
+          path: ${{ runner.temp }}/pages-lite
+
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy game
         id: deployment
         uses: actions/deploy-pages@v4
